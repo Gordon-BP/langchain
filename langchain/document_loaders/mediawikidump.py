@@ -29,12 +29,22 @@ class MWDumpLoader(BaseLoader):
     :type file_path: str
     :param encoding: Charset encoding, defaults to "utf8"
     :type encoding: str, optional
+    :param skip_redirects: TR=rue to skip pages that redirect to other pages, False to keep them. False by default
+    :type skip_redirects: bool, optional
+    :param stop_on_error: False to skip over pages that cause parsing errors, True to stop. True by default
+    :type stop_on_error: bool, optional
     """
 
-    def __init__(self, file_path: str, encoding: Optional[str] = "utf8"):
+    def __init__(
+            self, file_path: str, 
+            encoding: Optional[str] = "utf8",
+            skip_redirects: Optional[bool]=True,
+            stop_on_error: Optional[bool]=False):
         """Initialize with file path."""
         self.file_path = file_path
         self.encoding = encoding
+        self.skip_redirects = skip_redirects
+        self.stop_on_error = stop_on_error
 
     def load(self) -> List[Document]:
         """Load from file path."""
@@ -46,12 +56,20 @@ class MWDumpLoader(BaseLoader):
         docs = []
 
         for page in dump.pages:
-            for revision in page:
-                code = mwparserfromhell.parse(revision.text)
-                text = code.strip_code(
-                    normalize=True, collapse=True, keep_template_params=False
-                )
-                metadata = {"source": page.title}
-                docs.append(Document(page_content=text, metadata=metadata))
-
+            if self.skip_redirects and page.redirect != None:
+                continue
+            try:
+                for revision in page:
+                    code = mwparserfromhell.parse(revision.text)
+                    text = code.strip_code(
+                        normalize=True, collapse=True, keep_template_params=False
+                    )
+                    metadata = {"source": page.title}
+                    docs.append(Document(page_content=text, metadata=metadata))
+            except Exception as e:
+                print("Parsing error: {}".format(e))
+                if self.stop_on_error:
+                    break
+                else:
+                    continue
         return docs
