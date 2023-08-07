@@ -29,10 +29,18 @@ class BibtexparserWrapper(BaseModel):
     """Wrapper around bibtexparser.
 
     To use, you should have the ``bibtexparser`` python package installed.
-    https://bibtexparser.readthedocs.io/en/master/
+    https://bibtexparser.readthedocs.io/en/main/
 
-    This wrapper will use bibtexparser to load a collection of references from
-    a bibtex file and fetch document summaries.
+    This wrapper will use bibtexparser v1 to load a collection of references from
+    a bibtex file and fetch document summaries. It does not use the newer, v2 syntax.
+
+    Example: 
+        .. code-block:: python
+        from langchain.utilities import bibtex
+        
+        bib = BibtexparserWrapper()
+        bibEntries = bib.load_bibtex_entries('./myLatexFile.bib'')
+        [print(entry) for entry in bibEntries]
     """
 
     class Config:
@@ -54,7 +62,11 @@ class BibtexparserWrapper(BaseModel):
         return values
 
     def load_bibtex_entries(self, path: str) -> List[Dict[str, Any]]:
-        """Load bibtex entries from the bibtex file at the given path."""
+        """Loads bibtex entries from the bibtex file at the given path.
+        
+        Args:
+            path: Where the .bib file is
+        """ # noqa: E501
         import bibtexparser
 
         with open(path) as file:
@@ -64,7 +76,15 @@ class BibtexparserWrapper(BaseModel):
     def get_metadata(
         self, entry: Mapping[str, Any], load_extra: bool = False
     ) -> Dict[str, Any]:
-        """Get metadata for the given entry."""
+        """Gets metadata for the given entry.
+        
+        Args:
+            entry: A specific Bibtex entry from a bibtex file
+            load_extra: Whether or not to load any of these additional fields:
+                "annotate","booktitle","editor", "howpublished", "journal",
+                "keywords", "note", "organization", "publisher", "school",
+                "series", "type", "doi", "issn","isbn".
+        """
         publication = entry.get("journal") or entry.get("booktitle")
         if "url" in entry:
             url = entry["url"]
